@@ -1,0 +1,5 @@
+ring_buffer.c:9:6:buffer_init	16	static
+ring_buffer.c:15:6:buffer_is_empty	16	static
+ring_buffer.c:19:6:buffer_is_full	16	static
+ring_buffer.c:23:6:buffer_put	16	static
+ring_buffer.c:35:6:buffer_get	16	static
