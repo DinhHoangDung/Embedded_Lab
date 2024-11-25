@@ -169,25 +169,11 @@ void system_init(){
 	  timer_init();
 	  led7_init();
 
-	  setTimer2(10000);
+	  setTimer2(50);
 }
 
 uint8_t count_traffic = 0;
 
-//void traffic() {
-//	count_traffic = (count_traffic + 1) % 180;
-//	if (count_traffic < 60) { //RED on, YELLOW off
-//		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 1);
-//		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
-//	}
-//	else if (count_traffic < 80) { //GREEN on, RED off
-//		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);
-//		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
-//	} else { //YELLOW on, GREEN off
-//		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 1);
-//		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
-//	}
-//}
 void traffic() {
     count_traffic = (count_traffic + 1) % 180; // Cycle through a full period
 
