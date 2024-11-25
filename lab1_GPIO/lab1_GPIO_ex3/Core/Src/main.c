@@ -94,24 +94,27 @@ int main(void)
   int counter = 0;
   while (1)
   {
-	  	if (counter == 10) counter = 0;
-		if (counter == 0) {
+	  //	  RED: LED3, GREEN: Y0, YELLOW: Y1
+	  	if (counter == 9) counter = 0;
+	  	if (counter < 5) {
+			// Red Light (5 seconds)
 			HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);
 			HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
 			HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
-		}
-		if (counter == 5) {
+	  	} else if (counter < 8) {
+			// Green Light (3 seconds)
 			HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
 			HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 1);
 			HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
-		}
-		if (counter == 8) {
+	  	} else {
+			// Yellow Light (1 second)
 			HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
 			HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
 			HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 1);
-		}
+	  	}
 		counter++;
 		HAL_Delay(1000);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

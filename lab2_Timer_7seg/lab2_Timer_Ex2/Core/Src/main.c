@@ -174,19 +174,41 @@ void system_init(){
 
 uint8_t count_traffic = 0;
 
+//void traffic() {
+//	count_traffic = (count_traffic + 1) % 180;
+//	if (count_traffic < 60) { //RED on, YELLOW off
+//		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 1);
+//		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
+//	}
+//	else if (count_traffic < 80) { //GREEN on, RED off
+//		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);
+//		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
+//	} else { //YELLOW on, GREEN off
+//		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 1);
+//		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
+//	}
+//}
 void traffic() {
-	count_traffic = (count_traffic + 1) % 180;
-	if (count_traffic < 60) { //RED on, YELLOW off
-		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 1);
-		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);
-	}
-	else if (count_traffic < 80) { //GREEN on, RED off
-		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);
-		HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);
-	} else { //YELLOW on, GREEN off
-		HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 1);
-		HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);
-	}
+    count_traffic = (count_traffic + 1) % 180; // Cycle through a full period
+
+    if (count_traffic < 60) {
+        // RED on, GREEN and YELLOW off
+        HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 1);  // RED
+        HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);  // GREEN
+        HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);  // YELLOW
+    }
+    else if (count_traffic < 80) {
+        // GREEN on, RED and YELLOW off
+        HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);  // RED
+        HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 1);  // GREEN
+        HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 0);  // YELLOW
+    }
+    else {
+        // YELLOW on, RED and GREEN off
+        HAL_GPIO_WritePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin, 0);  // RED
+        HAL_GPIO_WritePin(OUTPUT_Y0_GPIO_Port, OUTPUT_Y0_Pin, 0);  // GREEN
+        HAL_GPIO_WritePin(OUTPUT_Y1_GPIO_Port, OUTPUT_Y1_Pin, 1);  // YELLOW
+    }
 }
 /* USER CODE END 4 */
 

@@ -169,11 +169,11 @@ void system_init(){
 	  timer_init();
 	  led7_init();
 
-	  setTimer2(10000);
+	  setTimer2(50);
 }
 
 int second = 0;
-int minute = 0;
+int minute = 59;
 int hour = 23;
 uint8_t count = 0;
 

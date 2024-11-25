@@ -173,7 +173,7 @@ void system_init(){
 	  timer_init();
 	  led7_init();
 
-	  setTimer2(10000);
+	  setTimer2(50);
 }
 
 uint8_t count_led_debug = 0;

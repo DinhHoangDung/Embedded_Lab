@@ -6,6 +6,8 @@
  */
 #include "software_timer.h"
 
+#include "software_timer.h"
+
 #define TIMER_CYCLE_2 1
 
 //software timer variable
