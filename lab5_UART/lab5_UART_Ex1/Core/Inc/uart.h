@@ -11,6 +11,10 @@
 #include "usart.h"
 #include <stdio.h>
 #include "utils.h"
+#include "ring_buffer.h"
+
+extern ring_buffer_t uart_ring_buffer;
+extern uint8_t uart_receive_flag;
 
 void uart_init_rs232();
 

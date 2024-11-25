@@ -6,41 +6,44 @@
  */
 #include "ring_buffer.h"
 
-void buffer_init(RingBuffer *buf) {
-    buf->head = 0;
-    buf->tail = 0;
-    buf->full = false;
+void ringBufferPush(ring_buffer_t *buf, uint8_t value)
+{
+	buf->data[buf->tail] = value;
+	buf->tail++;
+	if (buf->tail == RING_BUFFER_MAX_SIZE)
+	{
+		buf->tail = 0;
+	}
+	if (buf->length < RING_BUFFER_MAX_SIZE)
+	{
+		buf->length++;
+	}
 }
 
-bool buffer_is_empty(RingBuffer *buf) {
-    return (buf->head == buf->tail) && !buf->full;
+uint8_t ringBufferPop(ring_buffer_t *buf, uint8_t *data)
+{
+	if (buf->length > 0)
+	{
+		*data = buf->data[buf->head];
+		buf->head++;
+		buf->length--;
+		return RING_BUFFER_SUCCESS;
+	}
+	return RING_BUFFER_ERR_EMPTY;
 }
 
-bool buffer_is_full(RingBuffer *buf) {
-    return buf->full;
+uint8_t ringBufferPeek(ring_buffer_t *buf, uint8_t *data)
+{
+	if (buf->length > 0)
+	{
+		*data = buf->data[buf->head];
+		return RING_BUFFER_SUCCESS;
+	}
+	return RING_BUFFER_ERR_EMPTY;
 }
 
-bool buffer_put(RingBuffer *buf, uint8_t data) {
-    if (buffer_is_full(buf)) {
-        return false; // Buffer overflow
-    }
-
-    buf->buffer[buf->head] = data;
-    buf->head = (buf->head + 1) % BUFFER_SIZE;
-    buf->full = (buf->head == buf->tail);
-
-    return true; // Success
-}
-
-bool buffer_get(RingBuffer *buf, uint8_t *data) {
-    if (buffer_is_empty(buf)) {
-        return false;  // No data to read
-    }
-
-    *data = buf->buffer[buf->tail];
-    buf->tail = (buf->tail + 1) % BUFFER_SIZE;
-    buf->full = false;
-
-    return true;  // Read successfully
+uint8_t isRingBufferEmpty(ring_buffer_t *buf)
+{
+	return buf->length;
 }
 

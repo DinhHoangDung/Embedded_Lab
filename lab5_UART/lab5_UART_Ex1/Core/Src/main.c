@@ -55,15 +55,15 @@
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
-RingBuffer uart_rx_buffer; //Ring buffer for UART data
-volatile uint8_t uart_data_ready = 0; //Flag for UART data processing
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
-void process_uart_data(void);
+void test_LedDebug();
+void test_Uart();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -114,9 +114,21 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  if(uart_data_ready) {
-		  uart_data_ready = 0;
-		  process_uart_data();
+	  if(flag_timer2) {
+		  flag_timer2 = 0;
+		  button_Scan();
+		  test_LedDebug();
+		  ds3231_ReadTime();
+
+		  if(uart_receive_flag) {
+			  uart_receive_flag = 0;
+			  uint8_t receive_data;
+			  while(uart_ring_buffer.length > 0) {
+				  //Process the received data
+				  ringBufferPop(&uart_ring_buffer, &receive_data);
+			  }
+		  }
+
 	  }
     /* USER CODE END WHILE */
 
@@ -182,10 +194,23 @@ void system_init(){
 	  setTimer2(50);
 }
 
-void process_uart_data(void) {
-	while (uart_rx_buffer.tail != uart_rx_buffer.head) {
-		uint8_t data = buffer_get(&uart_rx_buffer);
-		HAL_UART_Transmit(&huart1, &data, 1, HAL_MAX_DELAY); // Echo back received data
+uint16_t count_led_debug = 0;
+
+void test_LedDebug() {
+	count_led_debug = (count_led_debug + 1) % 20;
+	if (count_led_debug == 0) {
+		HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
+	}
+}
+
+void test_Uart() {
+	if (button_count[12] == 1) {
+		uart_Rs232SendNum(ds3231_hours);
+		uart_Rs232SendString(":");
+		uart_Rs232SendNum(ds3231_min);
+		uart_Rs232SendString(":");
+		uart_Rs232SendNum(ds3231_sec);
+		uart_Rs232SendString("\n");
 	}
 }
 
