@@ -75,8 +75,8 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
 void test_LedDebug();
-void readTemperature();
-
+//void readTemperature();
+void sendTemperatureToESP();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -145,11 +145,10 @@ int main(void)
 			  }
 			  break;
 		  case SEND_TEMPERATURE:
-			  readTemperature();
-			  uart_EspSendBytes(&roundedTemperature, 1);
+			  //sendTemperatureToESP();
+			  sendTemperatureToESP();
 			  break;
 		  }
-		  test_Esp();
 	  }
 
     /* USER CODE END WHILE */
@@ -223,24 +222,31 @@ void test_LedDebug(){
 	}
 }
 
-uint8_t timer_temperature_cnt = 0;
-void readTemperature() {
-	timer_temperature_cnt = (timer_temperature_cnt + 1) % READ_TEMP_CYCLE;
-	if (timer_temperature_cnt == 0){
-		sensor_Read();
-		lcd_ShowStr(10, 180, "Temperature:", RED, BLACK, 16, 0);
+//uint8_t timer_temperature_cnt = 0;
+//void readTemperature() {
+//	timer_temperature_cnt = (timer_temperature_cnt + 1) % READ_TEMP_CYCLE;
+//	if (timer_temperature_cnt == 0){
+//		sensor_Read();
+//		lcd_ShowStr(10, 180, "Temperature:", RED, BLACK, 16, 0);
+//
+//		// Send float temperature
+//		float currentTemperature = sensor_GetTemperature();
+//		memcpy(temperatureBytesArray, (uint8_t*)&currentTemperature, sizeof(float));
+//
+//		// Send rounded temperature
+//		roundedTemperature = round(currentTemperature);
+//
+//		lcd_ShowFloatNum(130, 180,currentTemperature, 4, RED, BLACK, 16);
+//	}
+//}
+char msg[50];
+void sendTemperatureToESP() {
+	float temperature = sensor_GetTemperature(); //Get value
 
-		// Send float temperature
-		float currentTemperature = sensor_GetTemperature();
-		memcpy(temperatureBytesArray, (uint8_t*)&currentTemperature, sizeof(float));
+	sniprintf(msg, sizeof(msg), "!TEMP:%.2f#", temperature); //Format
 
-		// Send rounded temperature
-		roundedTemperature = round(currentTemperature);
-
-		lcd_ShowFloatNum(130, 180,currentTemperature, 4, RED, BLACK, 16);
-	}
+	uart_Rs232SendString((uint8_t*)msg); //Send
 }
-
 /* USER CODE END 4 */
 
 /**
