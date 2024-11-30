@@ -6,7 +6,7 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2024 STMicroelectronics.
+  * <h2><center>&copy; Copyright (c) 2023 STMicroelectronics.
   * All rights reserved.</center></h2>
   *
   * This software component is licensed by ST under BSD 3-Clause license,
@@ -41,6 +41,7 @@
 #include "touch.h"
 #include "uart.h"
 #include "light_control.h"
+#include "math.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -54,12 +55,18 @@
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
+#define READ_TEMP_CYCLE 	600 // 30s, because software timer2 cycle is 50ms
+#define WAIT_ESP_INIT		0
+#define SEND_TEMPERATURE	1
 
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
 
 /* USER CODE BEGIN PV */
+uint8_t system_status = WAIT_ESP_INIT;
+uint8_t temperatureBytesArray[4];
+uint8_t roundedTemperature;
 
 /* USER CODE END PV */
 
@@ -67,7 +74,9 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
-void sendTemperatureToESP();
+void test_LedDebug();
+void readTemperature();
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -103,12 +112,12 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_TIM2_Init();
+  MX_DMA_Init();
   MX_SPI1_Init();
   MX_FSMC_Init();
   MX_I2C1_Init();
   MX_TIM13_Init();
-  MX_DMA_Init();
+  MX_TIM2_Init();
   MX_ADC1_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
@@ -119,11 +128,30 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  lcd_Clear(BLACK);
   while (1)
   {
-	  while(!flag_timer2);
-	  flag_timer2 = 0;
-	  sendTemperatureToESP();
+	  // 50ms task
+	  if(flag_timer2)
+	  {
+		  flag_timer2 = 0;
+		  test_LedDebug();
+		  switch (system_status)
+		  {
+		  case WAIT_ESP_INIT:
+			  if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(ESP12_BUSY_GPIO_Port, ESP12_BUSY_Pin))
+			  {
+				  system_status = SEND_TEMPERATURE;
+			  }
+			  break;
+		  case SEND_TEMPERATURE:
+			  readTemperature();
+			  uart_EspSendBytes(&roundedTemperature, 1);
+			  break;
+		  }
+		  test_Esp();
+	  }
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -144,6 +172,7 @@ void SystemClock_Config(void)
   */
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
+
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
@@ -160,6 +189,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -177,21 +207,40 @@ void SystemClock_Config(void)
 
 /* USER CODE BEGIN 4 */
 void system_init(){
-	timer_init();
-	button_init();
-	lcd_init();
-	uart_init_esp();
-	setTimer2(30000);
+	  timer_init();
+	  button_init();
+	  sensor_init();
+	  lcd_init();
+	  uart_init_esp();
+	  setTimer2(50);
 }
 
-char msg[50];
-void sendTemperatureToESP() {
-	float temperature = sensor_GetTemperature(); //Get value
-
-	sniprintf(msg, sizeof(msg), "!TEMP:%.2f#", temperature); //Format
-
-	uart_Rs232SendString((uint8_t*)msg); //Send
+uint8_t count_led_debug = 0;
+void test_LedDebug(){
+	count_led_debug = (count_led_debug + 1)%20;
+	if(count_led_debug == 0){
+		HAL_GPIO_TogglePin(DEBUG_LED_GPIO_Port, DEBUG_LED_Pin);
+	}
 }
+
+uint8_t timer_temperature_cnt = 0;
+void readTemperature() {
+	timer_temperature_cnt = (timer_temperature_cnt + 1) % READ_TEMP_CYCLE;
+	if (timer_temperature_cnt == 0){
+		sensor_Read();
+		lcd_ShowStr(10, 180, "Temperature:", RED, BLACK, 16, 0);
+
+		// Send float temperature
+		float currentTemperature = sensor_GetTemperature();
+		memcpy(temperatureBytesArray, (uint8_t*)&currentTemperature, sizeof(float));
+
+		// Send rounded temperature
+		roundedTemperature = round(currentTemperature);
+
+		lcd_ShowFloatNum(130, 180,currentTemperature, 4, RED, BLACK, 16);
+	}
+}
+
 /* USER CODE END 4 */
 
 /**
@@ -225,5 +274,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-
-/************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/
