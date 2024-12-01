@@ -65,8 +65,6 @@
 
 /* USER CODE BEGIN PV */
 uint8_t system_status = WAIT_ESP_INIT;
-uint8_t temperatureBytesArray[4];
-uint8_t roundedTemperature;
 
 /* USER CODE END PV */
 
@@ -75,7 +73,6 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
 void test_LedDebug();
-//void readTemperature();
 void sendTemperatureToESP();
 /* USER CODE END PFP */
 
@@ -145,7 +142,6 @@ int main(void)
 			  }
 			  break;
 		  case SEND_TEMPERATURE:
-			  //sendTemperatureToESP();
 			  sendTemperatureToESP();
 			  break;
 		  }
@@ -222,23 +218,6 @@ void test_LedDebug(){
 	}
 }
 
-//uint8_t timer_temperature_cnt = 0;
-//void readTemperature() {
-//	timer_temperature_cnt = (timer_temperature_cnt + 1) % READ_TEMP_CYCLE;
-//	if (timer_temperature_cnt == 0){
-//		sensor_Read();
-//		lcd_ShowStr(10, 180, "Temperature:", RED, BLACK, 16, 0);
-//
-//		// Send float temperature
-//		float currentTemperature = sensor_GetTemperature();
-//		memcpy(temperatureBytesArray, (uint8_t*)&currentTemperature, sizeof(float));
-//
-//		// Send rounded temperature
-//		roundedTemperature = round(currentTemperature);
-//
-//		lcd_ShowFloatNum(130, 180,currentTemperature, 4, RED, BLACK, 16);
-//	}
-//}
 char msg[50];
 void sendTemperatureToESP() {
 	float temperature = sensor_GetTemperature(); //Get value
