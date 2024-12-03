@@ -56,7 +56,7 @@
 void SystemClock_Config(void);
 /* USER CODE BEGIN PFP */
 void system_init();
-void shiftNumLeft();
+void shiftNumRight();
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -109,7 +109,7 @@ int main(void)
 	  while(!flag_timer2);
 	  flag_timer2 = 0;
 	  //Tasks
-	  shiftNumLeft();
+	  shiftNumRight();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -179,7 +179,7 @@ uint8_t d = 4;
 
 uint8_t count = 0;
 
-void shiftNumLeft() {
+void shiftNumRight() {
 	count = (count + 1) % 20;
 	if (count == 0) {
 		uint8_t temp = d;
