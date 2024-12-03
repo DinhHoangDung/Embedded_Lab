@@ -2,104 +2,168 @@
 #include "Adafruit_MQTT.h"
 #include "Adafruit_MQTT_Client.h"
 
-//Wifi name
-// #define WLAN_SSID       "..."
-#define WLAN_SSID       "..."
-//Wifi password
-// #define WLAN_PASS       "..."
-#define WLAN_PASS       "..."
+// WiFi Configuration
+#define WLAN_SSID       "..." // Replace with your WiFi SSID
+#define WLAN_PASS       "..." // Replace with your WiFi password
 
-//setup Adafruit
+// Adafruit IO Configuration
 #define AIO_SERVER      "io.adafruit.com"
-#define AIO_SERVERPORT  1883
-//fill your username                   
-// #define AIO_USERNAME    "..."
-#define AIO_USERNAME    "dgminh"
-//fill your key
-// #define AIO_KEY         "..."
-#define AIO_KEY         "aio_RpUj009ZxQ39H9aaKJUkFlODtjAh"
+#define AIO_SERVERPORT  1883 // Use 8883 for SSL
+#define AIO_USERNAME    "..." // Replace with your Adafruit IO username
+#define AIO_KEY         "..." // Replace with your Adafruit IO key
 
-//setup MQTT
+// Command Configuration
+#define TEMPERATURE_CMD_LENGTH 5
+#define BEGIN_SYMBOL '!'
+#define TERMINATE_SYMBOL '#'
+#define MQTT_INTERVAL 30000  // 30 seconds
+#define BLINK_INTERVAL 500   // 500ms
+
+// Pin Definitions
+const int LED_PIN = 2;  // LED indicator
+const int BUSY_PIN = 5; // Busy pin for state indication
+
+// MQTT Setup
 WiFiClient client;
 Adafruit_MQTT_Client mqtt(&client, AIO_SERVER, AIO_SERVERPORT, AIO_USERNAME, AIO_KEY);
-
-//setup publish
 Adafruit_MQTT_Publish temperature_pub = Adafruit_MQTT_Publish(&mqtt, AIO_USERNAME "/feeds/temperature");
 
-//setup subcribe
-Adafruit_MQTT_Subscribe temperature_sub = Adafruit_MQTT_Subscribe(&mqtt, AIO_USERNAME "/feeds/temperature", MQTT_QOS_1);
+// Variables for temperature processing
+char temperature_cmd[] = "TEMP:";
+int cmd_index = 0;
+bool is_cmd_begin = false;
+bool is_data_begin = false;
+char temperature_buffer[20];
+int data_index = 0;
+unsigned long last_mqtt_time = 0;
+unsigned long last_blink_time = 0;
 
-//pin Definitions
-int led_pin = 2;  // LED indicator
-int busy_pin = 5; // Busy pin for state indication
+// Function to connect and reconnect as necessary to the MQTT server
+void MQTT_connect() {
+    if (mqtt.connected()) {
+        return;
+    }
 
-//variables
-String temperature_data = "";
-unsigned long last_publish_time = 0;
-const unsigned long publish_interval = 30000; // 30 seconds
+    Serial.print("Connecting to MQTT... ");
+    while (mqtt.connect() != 0) {
+        Serial.println("Failed, retrying in 5 seconds...");
+        mqtt.disconnect();
+        delay(5000);
+    }
+    Serial.println("MQTT Connected!");
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  //set pin 2,5 as OUTPUT
-  pinMode(led_pin, OUTPUT);
-  pinMode(busy_pin, OUTPUT);
-  //set busy pin HIGH
-  digitalWrite(busy_pin, HIGH);
+    // Initialize Serial communication
+    Serial.begin(115200);
+    delay(10);
+    
+    // Configure pins
+    pinMode(LED_PIN, OUTPUT);
+    pinMode(BUSY_PIN, OUTPUT);
+    digitalWrite(BUSY_PIN, HIGH);  // Set busy during setup
 
-  Serial.begin(115200);
+    // Connect to WiFi
+    Serial.println(); Serial.println();
+    Serial.print("Connecting to ");
+    Serial.println(WLAN_SSID);
 
-  //connect Wifi
-  WiFi.begin(WLAN_SSID, WLAN_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    //toggle LED during connection
-    digitalWrite(led_pin, !digitalRead(led_pin));
-  }
+    WiFi.begin(WLAN_SSID, WLAN_PASS);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN)); // Blink LED while connecting
+        Serial.print(".");
+    }
+    Serial.println();
+    Serial.println("WiFi connected");
+    Serial.println("IP address: "); 
+    Serial.println(WiFi.localIP());
 
-  //connect MQTT
-  while (mqtt.connect() != 0) { 
-    mqtt.disconnect();
-    delay(500);
-  }
+    // Initial MQTT connection
+    MQTT_connect();
 
-  //finish setup, set busy pin LOW
-  digitalWrite(busy_pin, LOW);
+    // Setup complete
+    digitalWrite(BUSY_PIN, LOW);
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+    // Ensure the connection to MQTT is alive
+    MQTT_connect();
 
-  //receive packet
-  mqtt.processPackets(10);
-  
-  //read temperature data from Serial
-  if (Serial.available()) {
-    char c = Serial.read();
-    if (c == '#') { // End of temperature string
-      if (temperature_data.startsWith("!TEMP:")) {
-        float temperature = temperature_data.substring(6).toFloat();
-        Serial.println("Temperature: " + String(temperature));
+    // Process MQTT packets
+    mqtt.processPackets(10);
 
-        //publish temperature to Adafruit IO
-        if (millis() - last_publish_time > publish_interval) {
-          if (temperature_pub.publish(temperature)) {
-            Serial.println("Published temperature: " + String(temperature));
-            last_publish_time = millis();
-          } else {
-            Serial.println("Failed to publish temperature");
-          }
+    // Read and process serial data 
+    if (Serial.available()) {
+        int incoming_byte = Serial.read();
+        
+        if (is_cmd_begin) {
+            if (is_data_begin) {
+                if (TERMINATE_SYMBOL == incoming_byte) {
+                    if (data_index > 0) {
+                        // Null terminate the string
+                        temperature_buffer[data_index] = '\0';
+                        float temp_value = atof(temperature_buffer);
+                        
+                        // Publish temperature if interval has passed
+                        if (millis() - last_mqtt_time > MQTT_INTERVAL) {
+                            digitalWrite(BUSY_PIN, HIGH);  // Set busy during publish
+                            if (temperature_pub.publish(temp_value)) { // Corrected variable name
+                                Serial.print("Published temperature: ");
+                                Serial.println(temp_value);
+                                last_mqtt_time = millis();
+                            } else {
+                                Serial.println("Failed to publish temperature");
+                            }
+                            digitalWrite(BUSY_PIN, LOW);  // Clear busy after publish
+                        }
+                    }
+                    is_data_begin = false;
+                    is_cmd_begin = false;
+                } else {
+                    // Only accept numeric values and decimal point
+                    if ((incoming_byte >= '0' && incoming_byte <= '9') || incoming_byte == '.') {
+                        temperature_buffer[data_index] = incoming_byte;
+                        data_index++;
+                        if (data_index >= sizeof(temperature_buffer) - 1) {
+                            Serial.println("Temperature value too long");
+                            is_data_begin = false;
+                            is_cmd_begin = false;
+                        }
+                    } else {
+                        Serial.println("Temperature must be a number");
+                        is_data_begin = false;
+                        is_cmd_begin = false;
+                    }
+                }
+            } else {
+                // Verify command format
+                if (incoming_byte != temperature_cmd[cmd_index]) {
+                    Serial.print("Wrong command format: ");
+                    Serial.println((char)incoming_byte);
+                    is_cmd_begin = false;
+                } else {
+                    cmd_index++;
+                    if (TEMPERATURE_CMD_LENGTH == cmd_index) {
+                        is_data_begin = true;
+                        data_index = 0;
+                    }
+                }
+            }
+        } else if (incoming_byte == BEGIN_SYMBOL) {
+            is_cmd_begin = true;
+            cmd_index = 0;
         }
-      }
-      temperature_data = ""; //reset buffer
-    } else {
-      temperature_data += c; //build temperature string
     }
-  }
 
-  //lED indicator for normal operation
-  static unsigned long led_last_toggle = 0;
-  if (millis() - led_last_toggle > 500) { //toggle every 500 ms
-    digitalWrite(led_pin, !digitalRead(led_pin));
-    led_last_toggle = millis();
-  }
+    // LED indicator using millis() instead of delay
+    if (millis() - last_blink_time > BLINK_INTERVAL) {
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+        last_blink_time = millis();
+    }
+
+    // If MQTT disconnects, the connect function will handle it
+    if (!mqtt.ping()) {
+        mqtt.disconnect();
+    }
 }
