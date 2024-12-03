@@ -161,9 +161,4 @@ void loop() {
         digitalWrite(LED_PIN, !digitalRead(LED_PIN));
         last_blink_time = millis();
     }
-
-    // If MQTT disconnects, the connect function will handle it
-    if (!mqtt.ping()) {
-        mqtt.disconnect();
-    }
 }
